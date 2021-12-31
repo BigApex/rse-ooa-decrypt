@@ -1,0 +1,19 @@
+[package]
+name = "rse_ooa_decrypt"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[profile.release]
+lto = true
+debug = false
+opt-level = "z"
+codegen-units = 1
+
+[dependencies]
+pelite = "0.9"
+byteorder = "1"
+aes = "0.7"
+block-modes = "0.8"
+base64 = "0.13"
