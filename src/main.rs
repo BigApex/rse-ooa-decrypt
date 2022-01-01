@@ -6,6 +6,7 @@ use pelite::FileMap;
 use crate::util::{aes_decrypt_inplace, decrypt_dlf, dlf_get_cipher, get_dlf_auto};
 
 mod ooa;
+mod apex;
 mod titanfall2;
 mod util;
 
@@ -41,6 +42,7 @@ fn main() {
         let hash = get_ooa_hash(section).expect("Invalid .ooa section!");
         let section = match hash {
             titanfall2::HASH => titanfall2::parse(section),
+            apex::HASH_S11_1 => apex::parse_s11_1(section),
             _ => {
                 unreachable!("Unknown .ooa version hash!")
             }
