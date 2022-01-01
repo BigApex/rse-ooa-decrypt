@@ -5,8 +5,8 @@ use pelite::FileMap;
 
 use crate::util::{aes_decrypt_inplace, decrypt_dlf, dlf_get_cipher, get_dlf_auto};
 
-mod ooa;
 mod apex;
+mod ooa;
 mod titanfall2;
 mod util;
 
@@ -48,7 +48,10 @@ fn main() {
             }
         };
         debug_assert_eq!(file.optional_header().ImageBase, section.image_base);
-        debug_assert_eq!(file.optional_header().SizeOfImage - 0x1000, section.size_of_image);
+        debug_assert_eq!(
+            file.optional_header().SizeOfImage - 0x1000,
+            section.size_of_image
+        );
         println!("{:#X?}", section);
 
         let dlf = if let Some(dlf) = get_dlf_auto(&section.content_id) {

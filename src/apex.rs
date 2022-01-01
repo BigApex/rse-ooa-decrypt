@@ -5,7 +5,9 @@ use byteorder::{ReadBytesExt, LE};
 use crate::ooa::{read_data_dir, read_enc_block, read_import, read_thunk, Section};
 
 /// Corresponds to `SHA1(b"5.02.04.66")`
-pub const HASH_S11_1: [u8; 20] = [250, 245, 169, 146, 9, 235, 14, 14, 206, 72, 175, 215, 8, 35, 218, 185, 77, 140, 48, 61];
+pub const HASH_S11_1: [u8; 20] = [
+    250, 245, 169, 146, 9, 235, 14, 14, 206, 72, 175, 215, 8, 35, 218, 185, 77, 140, 48, 61,
+];
 
 pub fn parse_s11_1(data: &[u8]) -> Section {
     let content_id = {

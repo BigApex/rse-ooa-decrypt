@@ -2,6 +2,7 @@ use std::io::{Read, Seek};
 
 use byteorder::{ReadBytesExt, LE};
 
+/// Public structure containing all we need to restore 99% of the binary
 #[derive(Debug)]
 pub struct Section {
     pub content_id: String,
@@ -35,6 +36,7 @@ pub struct DataDir {
     pub size: u32,
 }
 
+/// Encrypted Block structure from `.ooa` section
 #[derive(Debug)]
 pub struct EncBlock {
     pub va: u32,

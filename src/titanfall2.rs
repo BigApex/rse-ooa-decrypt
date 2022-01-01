@@ -4,6 +4,8 @@ use byteorder::{ReadBytesExt, LE};
 
 use crate::ooa::{read_data_dir, read_enc_block, read_import, read_thunk, Section};
 
+// Cracked by hashcat
+/// Corresponds to `SHA1(b"5.00.01.35")`
 pub const HASH: [u8; 20] = [
     144, 186, 35, 2, 239, 178, 23, 166, 193, 39, 171, 1, 174, 248, 38, 101, 194, 51, 160, 24,
 ];
