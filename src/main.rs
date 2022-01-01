@@ -45,6 +45,8 @@ fn main() {
                 unreachable!("Unknown .ooa version hash!")
             }
         };
+        debug_assert_eq!(file.optional_header().ImageBase, section.image_base);
+        debug_assert_eq!(file.optional_header().SizeOfImage - 0x1000, section.size_of_image);
         println!("{:#X?}", section);
 
         let dlf = if let Some(dlf) = get_dlf_auto(&section.content_id) {
@@ -59,8 +61,9 @@ fn main() {
             None
         }
         .expect("Can't find correct DLF file!");
-        println!("{}", String::from_utf8_lossy(&dlf));
+        println!("DLF: {}", String::from_utf8_lossy(&dlf));
         let dlf_key = dlf_get_cipher(&dlf).expect("Failed to get CipherKey from DLF!");
+        println!("Key: {:?}", &dlf_key);
 
         let mut new = (file_map.as_ref()[0..section_header.PointerToRawData as usize]).to_vec();
         let e_lfanew = file.dos_header().e_lfanew as usize;
@@ -75,11 +78,13 @@ fn main() {
                 .iter()
                 .find(|s| s.VirtualAddress == block.va)
                 .expect("Failed to find section for decryption!");
-            // let mut iv = [0u8; 16];
-            // iv[..].copy_from_slice(&new[0x1000 - 0x10..0x1000]);
+            let mut iv = [0u8; 16];
+            iv[..].copy_from_slice(
+                &new[section.PointerToRawData as usize - 0x10..section.PointerToRawData as usize],
+            );
             aes_decrypt_inplace(
                 &dlf_key,
-                &[0u8; 16],
+                &iv,
                 &mut new[section.PointerToRawData as usize
                     ..section.PointerToRawData as usize + section.SizeOfRawData as usize],
             );
