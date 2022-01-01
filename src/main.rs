@@ -1,4 +1,3 @@
-use std::ffi::OsStr;
 use std::path::Path;
 
 use pelite::pe64::{Pe, PeFile};
@@ -50,16 +49,14 @@ fn main() {
 
         let dlf = if let Some(dlf) = get_dlf_auto(&section.content_id) {
             Some(dlf)
-        } else {
-            if let Some(path) = std::env::args().nth(2) {
-                if let Ok(data) = std::fs::read(path) {
-                    Some(decrypt_dlf(&data))
-                } else {
-                    None
-                }
+        } else if let Some(path) = std::env::args().nth(2) {
+            if let Ok(data) = std::fs::read(path) {
+                Some(decrypt_dlf(&data))
             } else {
                 None
             }
+        } else {
+            None
         }
         .expect("Can't find correct DLF file!");
         println!("{}", String::from_utf8_lossy(&dlf));
@@ -86,6 +83,15 @@ fn main() {
                 &mut new[section.PointerToRawData as usize
                     ..section.PointerToRawData as usize + section.SizeOfRawData as usize],
             );
+            // fix padding of one block
+            if new[section.PointerToRawData as usize + section.SizeOfRawData as usize - 0x10
+                ..section.PointerToRawData as usize + section.SizeOfRawData as usize]
+                == [0x10u8; 16]
+            {
+                new[section.PointerToRawData as usize + section.SizeOfRawData as usize - 0x10
+                    ..section.PointerToRawData as usize + section.SizeOfRawData as usize]
+                    .copy_from_slice(&[0u8; 16]);
+            }
         }
 
         // decrement sections count
@@ -99,15 +105,7 @@ fn main() {
         new[section_data_off..section_data_off + 0x28].fill(0);
 
         // fix size of image
-        // let size_of_image = optional_header.SizeOfImage
-        //     - if (section_header.VirtualSize % optional_header.SectionAlignment) != 0 {
-        //         section_header.VirtualSize + optional_header.SectionAlignment
-        //             - (section_header.VirtualSize % optional_header.SectionAlignment)
-        //     } else {
-        //         section_header.VirtualSize
-        //     };
         let size_of_image_off = e_lfanew + file_header_size + 56;
-        // new[size_of_image_off..size_of_image_off + 4].copy_from_slice(&size_of_image.to_le_bytes());
         new[size_of_image_off..size_of_image_off + 4]
             .copy_from_slice(&section.size_of_image.to_le_bytes());
 
@@ -117,21 +115,20 @@ fn main() {
 
         // fix import directory
         let import_dir_off = e_lfanew + file_header_size + 120;
-        new[import_dir_off + 0..import_dir_off + 4]
+        new[import_dir_off..import_dir_off + 4]
             .copy_from_slice(&section.import_dir.va.to_le_bytes());
         new[import_dir_off + 4..import_dir_off + 8]
             .copy_from_slice(&section.import_dir.size.to_le_bytes());
 
         // fix reloc directory
         let reloc_dir_off = e_lfanew + file_header_size + 152;
-        new[reloc_dir_off + 0..reloc_dir_off + 4]
-            .copy_from_slice(&section.reloc_dir.va.to_le_bytes());
+        new[reloc_dir_off..reloc_dir_off + 4].copy_from_slice(&section.reloc_dir.va.to_le_bytes());
         new[reloc_dir_off + 4..reloc_dir_off + 8]
             .copy_from_slice(&section.reloc_dir.size.to_le_bytes());
 
         // fix iat directory
         let iat_off = e_lfanew + file_header_size + 208;
-        new[iat_off + 0..iat_off + 4].copy_from_slice(&section.iat_dir.va.to_le_bytes());
+        new[iat_off..iat_off + 4].copy_from_slice(&section.iat_dir.va.to_le_bytes());
         new[iat_off + 4..iat_off + 8].copy_from_slice(&section.iat_dir.size.to_le_bytes());
 
         std::fs::write(

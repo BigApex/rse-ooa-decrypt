@@ -1,5 +1,3 @@
-use std::path::Path;
-
 use aes::Aes128;
 use block_modes::block_padding::Pkcs7;
 use block_modes::{BlockMode, Cbc};
@@ -36,32 +34,24 @@ pub fn get_dlf_auto(content_id: &str) -> Option<Vec<u8>> {
         let path = "C:\\ProgramData\\Electronic Arts\\EA Services\\License\\";
         if let Ok(data) = std::fs::read(path.to_owned() + content_id + ".dlf") {
             Some(decrypt_dlf(&data))
+        } else if let Ok(data) = std::fs::read(path.to_owned() + content_id + "_cached.dlf") {
+            Some(decrypt_dlf(&data))
+        } else if let Ok(data) = std::fs::read(content_id.to_owned() + ".dlf") {
+            Some(decrypt_dlf(&data))
+        } else if let Ok(data) = std::fs::read(content_id.to_owned() + "_cached.dlf") {
+            Some(decrypt_dlf(&data))
         } else {
-            if let Ok(data) = std::fs::read(path.to_owned() + content_id + "_cached.dlf") {
-                Some(decrypt_dlf(&data))
-            } else {
-                if let Ok(data) = std::fs::read(content_id.to_owned() + ".dlf") {
-                    Some(decrypt_dlf(&data))
-                } else {
-                    if let Ok(data) = std::fs::read(content_id.to_owned() + "_cached.dlf") {
-                        Some(decrypt_dlf(&data))
-                    } else {
-                        None
-                    }
-                }
-            }
+            None
         }
     }
     #[cfg(not(target_os = "windows"))]
     {
         if let Ok(data) = std::fs::read(content_id.to_owned() + ".dlf") {
             Some(decrypt_dlf(&data))
+        } else if let Ok(data) = std::fs::read(content_id.to_owned() + "_cached.dlf") {
+            Some(decrypt_dlf(&data))
         } else {
-            if let Ok(data) = std::fs::read(content_id.to_owned() + "_cached.dlf") {
-                Some(decrypt_dlf(&data))
-            } else {
-                None
-            }
+            None
         }
     }
 }
