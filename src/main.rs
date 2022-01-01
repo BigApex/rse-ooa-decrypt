@@ -21,6 +21,20 @@ fn get_ooa_hash(data: &[u8]) -> Option<[u8; 20]> {
 }
 
 fn main() {
+    // Nicer Release error messages, I guess?
+    #[cfg(not(debug_assertions))]
+    std::panic::set_hook(Box::new(|panic_info: &std::panic::PanicInfo| {
+        if let Some(s) = panic_info.payload().downcast_ref::<&str>() {
+            println!("{}", s);
+        } else {
+            let string = panic_info.to_string();
+            println!(
+                "{}",
+                &string[13..string.rfind('\'').unwrap_or(string.len())]
+            );
+        }
+    }));
+
     let file = std::env::args().nth(1);
     // let key = std::env::args().nth(2);
     if let Some(path) = file {
