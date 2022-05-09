@@ -31,10 +31,14 @@ pub fn decrypt_dlf(data: &[u8]) -> Vec<u8> {
 pub fn get_dlf_auto(content_id: &str) -> Option<Vec<u8>> {
     #[cfg(target_os = "windows")]
     {
-        let path = "C:\\ProgramData\\Electronic Arts\\EA Services\\License\\";
-        if let Ok(data) = std::fs::read(path.to_owned() + content_id + ".dlf") {
+        let path = if let Ok(val) = std::env::var("ProgramData") {
+            format!("{}\\Electronic Arts\\EA Services\\License\\", val)
+        } else {
+            "C:\\ProgramData\\Electronic Arts\\EA Services\\License\\".to_owned()
+        };
+        if let Ok(data) = std::fs::read(path.clone() + content_id + ".dlf") {
             Some(decrypt_dlf(&data))
-        } else if let Ok(data) = std::fs::read(path.to_owned() + content_id + "_cached.dlf") {
+        } else if let Ok(data) = std::fs::read(path + content_id + "_cached.dlf") {
             Some(decrypt_dlf(&data))
         } else if let Ok(data) = std::fs::read(content_id.to_owned() + ".dlf") {
             Some(decrypt_dlf(&data))
@@ -61,7 +65,10 @@ pub fn dlf_get_cipher(dlf: &[u8]) -> Option<Vec<u8>> {
     if let Some(pos) = string.find(CIPHER_TAG) {
         let pos = pos + CIPHER_TAG.len();
         // let string = &string[pos..pos + string[pos..].find('<').unwrap_or(string.len() - pos)];
-        if let Ok(mut data) = base64::decode(&string[pos..pos + BASE64_16_LEN]) {
+        if let Ok(mut data) = base64::decode_config(
+            &string[pos..pos + BASE64_16_LEN],
+            base64::STANDARD.decode_allow_trailing_bits(true),
+        ) {
             data.truncate(16);
             Some(data)
         } else {

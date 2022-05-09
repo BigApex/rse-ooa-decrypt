@@ -55,12 +55,19 @@ fn main() {
             ..section_header.PointerToRawData as usize + section_header.SizeOfRawData as usize];
         let hash = get_ooa_hash(section).expect("Invalid .ooa section!");
         let section = match hash {
-            titanfall2::HASH => titanfall2::parse(section),
-            apex::HASH_S11_1 => apex::parse_s11_1(section),
+            titanfall2::HASH => {
+                eprintln!("Parsing 5.00.01.35");
+                titanfall2::parse(section)
+            }
+            apex::HASH_S11_1 => {
+                eprintln!("Parsing 5.02.04.66");
+                apex::parse_s11_1(section)
+            }
             _ => {
                 unreachable!("Unknown .ooa version hash!")
             }
         };
+        // This shit will fail on BFV...
         debug_assert_eq!(file.optional_header().ImageBase, section.image_base);
         debug_assert_eq!(
             file.optional_header().SizeOfImage - 0x1000,
@@ -84,7 +91,18 @@ fn main() {
         let dlf_key = dlf_get_cipher(&dlf).expect("Failed to get CipherKey from DLF!");
         println!("Key: {:?}", &dlf_key);
 
-        let mut new = (file_map.as_ref()[0..section_header.PointerToRawData as usize]).to_vec();
+        let weird_binary = !((section.import_dir.va != 0)
+            && (section.import_dir.size != 0)
+            && (section.reloc_dir.va != 0)
+            && (section.reloc_dir.size != 0)
+            && (section.iat_dir.va != 0)
+            && (section.iat_dir.size != 0));
+
+        let mut new = if weird_binary {
+            file_map.as_ref()[..].to_vec()
+        } else {
+            file_map.as_ref()[0..section_header.PointerToRawData as usize].to_vec()
+        };
         let e_lfanew = file.dos_header().e_lfanew as usize;
         let file_header_size = 24usize;
         let optional_header_size = file.file_header().SizeOfOptionalHeader as usize;
@@ -118,42 +136,69 @@ fn main() {
             }
         }
 
-        // decrement sections count
-        let sections_num_off = e_lfanew + 6;
-        new[sections_num_off..sections_num_off + 2]
-            .copy_from_slice(&(sections_num as u16 - 1).to_le_bytes());
+        if !weird_binary {
+            // decrement sections count
+            let sections_num_off = e_lfanew + 6;
+            new[sections_num_off..sections_num_off + 2]
+                .copy_from_slice(&(sections_num as u16 - 1).to_le_bytes());
 
-        // Zero section out
-        let section_data_off =
-            e_lfanew + file_header_size + optional_header_size + (sections_num as usize - 1) * 0x28;
-        new[section_data_off..section_data_off + 0x28].fill(0);
+            // Zero section out
+            let section_data_off = e_lfanew
+                + file_header_size
+                + optional_header_size
+                + (sections_num as usize - 1) * 0x28;
+            new[section_data_off..section_data_off + 0x28].fill(0);
 
-        // fix size of image
-        let size_of_image_off = e_lfanew + file_header_size + 56;
-        new[size_of_image_off..size_of_image_off + 4]
-            .copy_from_slice(&section.size_of_image.to_le_bytes());
+            // fix size of image
+            let size_of_image_off = e_lfanew + file_header_size + 56;
+            if section.size_of_image != 0 {
+                new[size_of_image_off..size_of_image_off + 4]
+                    .copy_from_slice(&section.size_of_image.to_le_bytes());
+            } else {
+                // manual?
+                let new_val = file.optional_header().SizeOfImage - 0x1000;
+                eprintln!("Manual fixing of SizeOfImage: {:08X}", new_val);
+                new[size_of_image_off..size_of_image_off + 4]
+                    .copy_from_slice(&new_val.to_le_bytes());
+            }
+        } else {
+            eprintln!("Weird Binary detected, not fixing sections and SizeOfImage!");
+        }
 
         // fix OEP
         let oep_off = e_lfanew + file_header_size + 16;
         new[oep_off..oep_off + 4].copy_from_slice(&(section.oep as u32).to_le_bytes());
 
-        // fix import directory
-        let import_dir_off = e_lfanew + file_header_size + 120;
-        new[import_dir_off..import_dir_off + 4]
-            .copy_from_slice(&section.import_dir.va.to_le_bytes());
-        new[import_dir_off + 4..import_dir_off + 8]
-            .copy_from_slice(&section.import_dir.size.to_le_bytes());
+        if (section.import_dir.va != 0) && (section.import_dir.size != 0) {
+            // fix import directory
+            let import_dir_off = e_lfanew + file_header_size + 120;
+            new[import_dir_off..import_dir_off + 4]
+                .copy_from_slice(&section.import_dir.va.to_le_bytes());
+            new[import_dir_off + 4..import_dir_off + 8]
+                .copy_from_slice(&section.import_dir.size.to_le_bytes());
+        } else {
+            eprintln!("Weird ImportDir: {:?}", section.import_dir)
+        }
 
-        // fix reloc directory
-        let reloc_dir_off = e_lfanew + file_header_size + 152;
-        new[reloc_dir_off..reloc_dir_off + 4].copy_from_slice(&section.reloc_dir.va.to_le_bytes());
-        new[reloc_dir_off + 4..reloc_dir_off + 8]
-            .copy_from_slice(&section.reloc_dir.size.to_le_bytes());
+        if (section.reloc_dir.va != 0) && (section.reloc_dir.size != 0) {
+            // fix reloc directory
+            let reloc_dir_off = e_lfanew + file_header_size + 152;
+            new[reloc_dir_off..reloc_dir_off + 4]
+                .copy_from_slice(&section.reloc_dir.va.to_le_bytes());
+            new[reloc_dir_off + 4..reloc_dir_off + 8]
+                .copy_from_slice(&section.reloc_dir.size.to_le_bytes());
+        } else {
+            eprintln!("Weird RelocDir: {:?}", section.reloc_dir)
+        }
 
-        // fix iat directory
-        let iat_off = e_lfanew + file_header_size + 208;
-        new[iat_off..iat_off + 4].copy_from_slice(&section.iat_dir.va.to_le_bytes());
-        new[iat_off + 4..iat_off + 8].copy_from_slice(&section.iat_dir.size.to_le_bytes());
+        if (section.iat_dir.va != 0) && (section.iat_dir.size != 0) {
+            // fix iat directory
+            let iat_off = e_lfanew + file_header_size + 208;
+            new[iat_off..iat_off + 4].copy_from_slice(&section.iat_dir.va.to_le_bytes());
+            new[iat_off + 4..iat_off + 8].copy_from_slice(&section.iat_dir.size.to_le_bytes());
+        } else {
+            eprintln!("Weird IATDir: {:?}", section.iat_dir)
+        }
 
         std::fs::write(
             if let Some(stem) = Path::new(&path).file_stem() {

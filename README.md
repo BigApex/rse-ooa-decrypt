@@ -8,11 +8,11 @@ This project was made to eliminate the need to distribute binary blobs, which mi
 rse_ooa_decrypt.exe packed.exe [.dlf file]
 ```
 
-This tool will automatically find correct `.dlf` file in `C:\ProgramData\Electronic Arts\EA Services\License` if you are on Windows and in the current directory.
+This tool will automatically find correct `.dlf` file in `%ProgramData%\Electronic Arts\EA Services\License` if you are on Windows and in the current directory.
 
 ## Supported versions
 
- * Retail Apex (`5.02.04.66`)
+ * Retail Apex, BFV (`5.02.04.66`)
  * Titanfall 2 (`5.00.01.35`)
 
 
