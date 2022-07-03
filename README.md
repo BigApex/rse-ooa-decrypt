@@ -14,6 +14,7 @@ This tool will automatically find correct `.dlf` file in `%ProgramData%\Electron
 
  * Retail Apex, BFV (`5.02.04.66`)
  * Titanfall 2 (`5.00.01.35`)
+ * Skate CPT (`5.02.08.75`)
 
 
 ## Non-Goals

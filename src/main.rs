@@ -7,6 +7,7 @@ use crate::util::{aes_decrypt_inplace, decrypt_dlf, dlf_get_cipher, get_dlf_auto
 
 mod apex;
 mod ooa;
+mod skate_cpt;
 mod titanfall2;
 mod util;
 
@@ -63,12 +64,18 @@ fn main() {
                 eprintln!("Parsing 5.02.04.66");
                 apex::parse_s11_1(section)
             }
+            skate_cpt::HASH => {
+                eprintln!("Parsing Skate CPT.");
+                skate_cpt::parse(section)
+            }
             _ => {
-                unreachable!("Unknown .ooa version hash!")
+                unreachable!("Unknown .ooa version hash! {:X?}", hash);
             }
         };
         // This shit will fail on BFV...
-        debug_assert_eq!(file.optional_header().ImageBase, section.image_base);
+        if (section.image_base != 0) {
+            debug_assert_eq!(file.optional_header().ImageBase, section.image_base);
+        }
         debug_assert_eq!(
             file.optional_header().SizeOfImage - 0x1000,
             section.size_of_image
