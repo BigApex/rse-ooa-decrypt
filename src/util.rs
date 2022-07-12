@@ -12,9 +12,13 @@ const CIPHER_TAG: &str = "<CipherKey>";
 const BASE64_16_LEN: usize = 24;
 
 // Apex has weird behaviour when 0x1000-0x10 isn't full zeroes...
-pub fn aes_decrypt(key: &[u8], iv: &[u8], enc: &[u8]) -> Vec<u8> {
+pub fn aes_decrypt(key: &[u8], iv: &[u8], enc: &[u8]) -> Option<Vec<u8>> {
     let cipher = Aes128Cbc::new_from_slices(key, iv).unwrap();
-    cipher.decrypt_vec(enc).unwrap()
+    if let Ok(data) = cipher.decrypt_vec(enc) {
+        Some(data)
+    } else {
+        None
+    }
 }
 
 pub fn aes_decrypt_inplace(key: &[u8], iv: &[u8], buf: &mut [u8]) {
@@ -23,7 +27,11 @@ pub fn aes_decrypt_inplace(key: &[u8], iv: &[u8], buf: &mut [u8]) {
 }
 
 pub fn decrypt_dlf(data: &[u8]) -> Vec<u8> {
-    aes_decrypt(&DLF_KEY, &IV, &data[0x41..])
+    if let Some(data) = aes_decrypt(&DLF_KEY, &IV, &data[0x41..]) {
+        data
+    } else {
+        aes_decrypt(&DLF_KEY, &IV, data).expect("Failed DLF decrypt!")
+    }
 }
 
 // Good version is Windows only yeah...
