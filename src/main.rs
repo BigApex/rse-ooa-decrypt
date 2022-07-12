@@ -6,6 +6,7 @@ use pelite::FileMap;
 use crate::util::{aes_decrypt_inplace, decrypt_dlf, dlf_get_cipher, get_dlf_auto};
 
 mod apex;
+mod bf2042;
 mod ooa;
 mod skate_cpt;
 mod titanfall2;
@@ -67,6 +68,10 @@ fn main() {
             skate_cpt::HASH => {
                 eprintln!("Parsing Skate CPT.");
                 skate_cpt::parse(section)
+            }
+            bf2042::HASH => {
+                eprintln!("Parsing BF2042");
+                bf2042::parse(section)
             }
             _ => {
                 unreachable!("Unknown .ooa version hash! {:X?}", hash);
